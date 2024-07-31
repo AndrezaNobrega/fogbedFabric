@@ -1,0 +1,11 @@
+# Use a imagem existente do Hyperledger Fabric Peer como base
+FROM hyperledger/fabric-peer:2.5
+
+# Atualize os pacotes e instale as ferramentas necessárias
+RUN apt-get update && apt-get install -y \
+    bash \
+    iproute2 \
+    iputils-ping
+
+# Defina o comando padrão
+CMD ["peer", "node", "start"]
