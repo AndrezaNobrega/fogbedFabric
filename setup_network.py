@@ -74,14 +74,15 @@ peer0_org1 = fabric_plugin.add_peer(
         'CORE_OPERATIONS_LISTENADDRESS': 'mn.peer0.org1:9444',
         'CORE_METRICS_PROVIDER': 'prometheus',
         'CORE_VM_ENDPOINT': 'unix:///host/var/run/docker.sock',
+        'CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE': 'fabric_test',
         'CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG': '{"peername":"peer0org1"}',
         'CORE_CHAINCODE_EXECUTETIMEOUT': '300s',
     },
     volumes=[
-        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com:/etc/hyperledger/fabric',
-        'peer0.org1.example.com:/var/hyperledger/production',
-        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/compose/docker/peercfg:/etc/hyperledger/peercfg',
-        '/var/run/docker.sock:/host/var/run/docker.sock',
+        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com:/etc/hyperledger/fabric:rw',
+        'peer0.org1.example.com:/var/hyperledger/production:rw',
+        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/compose/docker/peercfg:/etc/hyperledger/peercfg:rw',
+        '/var/run/docker.sock:/host/var/run/docker.sock:rw',
     ],
     port_bindings={'7051': 7051, '9444': 9444},
     org_instance=org1,
@@ -90,7 +91,6 @@ peer0_org1 = fabric_plugin.add_peer(
 
 # Criação da instância virtual para o Peer da Org2
 org2 = exp.add_virtual_instance('org2')
-
 # Iniciar o Peer da Org2
 peer0_org2 = fabric_plugin.add_peer(
     name='peer0.org2',
@@ -112,21 +112,23 @@ peer0_org2 = fabric_plugin.add_peer(
         'CORE_PEER_LOCALMSPID': 'Org2MSP',
         'CORE_PEER_MSPCONFIGPATH': '/etc/hyperledger/fabric/msp',
         'CORE_OPERATIONS_LISTENADDRESS': 'mn.peer0.org2:9445',
+        'CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE': 'fabric_test',
         'CORE_METRICS_PROVIDER': 'prometheus',
         'CORE_VM_ENDPOINT': 'unix:///host/var/run/docker.sock',
         'CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG': '{"peername":"peer0org2"}',
         'CORE_CHAINCODE_EXECUTETIMEOUT': '300s',
     },
     volumes=[
-        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com:/etc/hyperledger/fabric',
-        'peer0.org2.example.com:/var/hyperledger/production',
-        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/compose/docker/peercfg:/etc/hyperledger/peercfg',
-        '/var/run/docker.sock:/host/var/run/docker.sock',
+        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com:/etc/hyperledger/fabric:rw',
+        'peer0.org2.example.com:/var/hyperledger/production:rw',
+        '/home/nobrega/Desktop/fabric-test/fabric-samples/test-network/compose/docker/peercfg:/etc/hyperledger/peercfg:rw',
+        '/var/run/docker.sock:/host/var/run/docker.sock:rw',
     ],
     port_bindings={'9051': 9051, '9445': 9445},
     org_instance=org2,
     network_mode='fabric_test'
 )
+
 
 # Iniciar a experimentação
 try:

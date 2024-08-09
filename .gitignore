@@ -13,3 +13,10 @@ organizations/peerOrganizations/*
 system-genesis-block/*
 *.tar.gz
 log.txt
+openflow
+# Ignorar o cache do Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb

@@ -14,7 +14,9 @@
 TEST_NETWORK_HOME=${TEST_NETWORK_HOME:-${PWD}}
 . ${TEST_NETWORK_HOME}/scripts/configUpdate.sh
 
-
+infoln ++++++++++++++++++++++++++++++++++++++++++++++++++
+infoln "Rodando o script setAnchorPeer.sh"
+infoln ++++++++++++++++++++++++++++++++++++++++++++++++++
 # NOTE: This requires jq and configtxlator for execution.
 createAnchorPeerUpdate() {
   infoln "Fetching channel config for channel $CHANNEL_NAME"
