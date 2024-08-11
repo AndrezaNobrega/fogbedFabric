@@ -3,6 +3,8 @@ import os
 from subprocess import check_output, CalledProcessError
 import time
 from colored_printer import successln, errorln, warningln
+import subprocess
+import json
 
 class FabricPlugin:
     def __init__(self, exp):
@@ -36,6 +38,55 @@ class FabricPlugin:
         self.exp.add_docker(container, org_instance)
         self.containers[name] = container
         return container
+    
+    def create_docker_network(self, network_name):
+        # Verifica se a rede já existe
+        try:
+            output = subprocess.check_output(['docker', 'network', 'ls'])
+            if network_name in output.decode():
+                print(f"A rede '{network_name}' já existe.")
+                return
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao listar redes Docker: {e}")
+            print(f"Saída de erro: {e.output.decode()}")
+            return
+
+        print(f"Criando a rede Docker '{network_name}'...")
+        command = ['docker', 'network', 'create', network_name]
+
+        try:
+            subprocess.run(command, check=True)
+            print(f"Rede '{network_name}' criada com sucesso.")
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao criar a rede Docker: {e}")
+            print(f"Saída de erro: {e.output.decode()}")
+
+    def generate_crypto_materials(self):
+        print("Gerando materiais criptográficos 🌀")
+        self.create_docker_network('fabric_test')
+        
+        # Caminho para o diretório onde estão as configurações de cryptogen
+        crypto_config_path = "./organizations/cryptogen"
+        
+        # Caminho absoluto para o binário cryptogen
+        cryptogen_path = "/home/nobrega/Desktop/fabric-samples/bin/cryptogen"
+        
+        # Comandos para gerar materiais criptográficos
+        commands = [
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-org1.yaml --output=organizations",
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-org2.yaml --output=organizations",
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-orderer.yaml --output=organizations"
+        ]
+        
+        # Executando cada comando
+        for command in commands:
+            print(f"Executando comando: {command}")
+            try:
+                subprocess.run(command, shell=True, check=True)
+                print("Comando executado com sucesso.  \n")
+            except subprocess.CalledProcessError as e:
+                print(f"Erro ao executar o comando: {e} \n")
+                print(f"Saída de erro: {e.output.decode()}")
 
     def create_channel(self, channel_name):
         print('Executando a criação do canal...')
@@ -104,8 +155,24 @@ class FabricPlugin:
             raise Exception(f"Channel creation failed: {e.output.decode()}")
 
         for org in [1, 2]:
+            #aqui exporta as variáveis de ambiente p trabalhar c os peers
+            if org == 1:
+                os.environ['CORE_PEER_LOCALMSPID'] = 'Org1MSP'
+                os.environ['CORE_PEER_TLS_ROOTCERT_FILE'] = f'{os.getcwd()}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt'
+                os.environ['CORE_PEER_MSPCONFIGPATH'] = f'{os.getcwd()}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp'
+                os.environ['CORE_PEER_ADDRESS'] = 'localhost:7051'
+            elif org == 2:
+                os.environ['CORE_PEER_LOCALMSPID'] = 'Org2MSP'
+                os.environ['CORE_PEER_TLS_ROOTCERT_FILE'] = f'{os.getcwd()}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt'
+                os.environ['CORE_PEER_MSPCONFIGPATH'] = f'{os.getcwd()}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp'
+                os.environ['CORE_PEER_ADDRESS'] = 'localhost:9051'
+
+            os.environ['CORE_PEER_TLS_ENABLED'] = 'true'
+            
             self.join_channel(org, channel_name, MAX_RETRY, CLI_DELAY)
-            self.set_anchor_peer(org, channel_name)
+            
+            #self.set_anchor_peer(org, channel_name)
+
 
         return f"Channel '{channel_name}' created and joined"
 
@@ -121,21 +188,13 @@ class FabricPlugin:
         env = os.environ.copy()
         env['FABRIC_CFG_PATH'] = f"{ROOTDIR}/configtx"
 
-        # aqui o que eu coloquei p resolver o
-        os.environ['CORE_PEER_TLS_ENABLED'] = 'true'
-        os.environ['CORE_PEER_LOCALMSPID'] = 'Org1MSP'
-        os.environ['CORE_PEER_TLS_ROOTCERT_FILE'] = f'{os.getcwd()}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt'
-        os.environ['CORE_PEER_MSPCONFIGPATH'] = f'{os.getcwd()}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp'
-        os.environ['CORE_PEER_ADDRESS'] = 'localhost:7051'
-
-        
         print('Buscando o bloco de configuração do canal no orderer...')
         peer_cmd = [
             peer_path, "channel", "fetch", "0", blockfile,
             "-o", "localhost:7050",
-            "--ordererTLSHostnameOverride", "orderer.example.com",
+            "--ordererTLSHostnameOverride", "mn.orderer",
             "-c", channel_name,
-            "--tls", "--cafile", ORDERER_CA
+            "--tls", "--cafile", os.environ['CORE_PEER_TLS_ROOTCERT_FILE']
         ]
 
         try:
@@ -145,7 +204,6 @@ class FabricPlugin:
         except CalledProcessError as e:
             print(f"Error output: {e.output.decode()}")
             
-
         join_cmd = [peer_path, "channel", "join", "-b", blockfile]
         env = os.environ.copy()
         env['CORE_PEER_LOCALMSPID'] = f"Org{org}MSP"
@@ -170,13 +228,95 @@ class FabricPlugin:
                     time.sleep(cli_delay)
 
     def set_anchor_peer(self, org, channel_name):
-        print('Executando o comando se ancho peer')
-        set_anchor_peer_cmd = ["./scripts/setAnchorPeer.sh", str(org), channel_name]
-        try:
-            print(f"Running command: {' '.join(set_anchor_peer_cmd)}")
-            output = check_output(set_anchor_peer_cmd)
-            print(f"Anchor peer for org{org} set successfully.")
-            print(output.decode())
-        except CalledProcessError as e:
-            print(f"Error output: {e.output.decode()}")
-            raise Exception(f"Failed to set anchor peer for org{org}: {e.output.decode()}")
+        def print_log(message):
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(message)
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+        def fetch_channel_config(org, channel_name, output_file):
+            print_log(f"Fetching channel config for channel {channel_name}")
+            peer_cmd = [
+                "/home/nobrega/Desktop/fabric-samples/bin/peer",
+                "channel", "fetch", "config", output_file,
+                "-o", "localhost:7050",
+                "--ordererTLSHostnameOverride", "mn.orderer",
+                "-c", channel_name,
+                "--tls", "--cafile", f"{os.getcwd()}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt"
+            ]
+            subprocess.run(peer_cmd, check=True)
+
+        def create_anchor_peer_update(org, channel_name):
+            msp_id = f"Org{org}MSP"
+            fetch_channel_config(org, channel_name, f"channel-artifacts/{msp_id}config.json")
+
+            print_log(f"Generating anchor peer update transaction for Org{org} on channel {channel_name}")
+            host = f"peer0.org{org}.example.com"
+            port = 7051 + (org - 1) * 2000  # Calcula a porta baseada na organização
+
+            with open(f"channel-artifacts/{msp_id}config.json", 'r') as f:
+                config_json = json.load(f)
+
+            anchor_peers = {
+                "mod_policy": "Admins",
+                "value": {
+                    "anchor_peers": [{"host": host, "port": port}]
+                },
+                "version": "0"
+            }
+
+            config_json['channel_group']['groups']['Application']['groups'][msp_id]['values']['AnchorPeers'] = anchor_peers
+
+            with open(f"channel-artifacts/{msp_id}modified_config.json", 'w') as f:
+                json.dump(config_json, f, indent=4)
+
+        def create_config_update(channel_name, msp_id):
+            configtxlator_path = "/home/nobrega/Desktop/fabric-samples/bin/configtxlator"
+
+            original = f"channel-artifacts/{msp_id}config.json"
+            modified = f"channel-artifacts/{msp_id}modified_config.json"
+            output = f"channel-artifacts/{msp_id}anchors.tx"
+
+            def json_to_proto(json_file, proto_file):
+                cmd = [configtxlator_path, "proto_encode", "--input", json_file, "--type", "common.Config"]
+                with open(proto_file, 'wb') as f:
+                    subprocess.run(cmd, check=True, stdout=f)
+
+            original_proto = original.replace(".json", ".pb")
+            modified_proto = modified.replace(".json", ".pb")
+
+            # Converte JSON para Protobuf
+            json_to_proto(original, original_proto)
+            json_to_proto(modified, modified_proto)
+
+            # Computa a atualização
+            cmd = [
+                configtxlator_path, "compute_update",
+                "--channel_id", channel_name,
+                "--original", original_proto,
+                "--updated", modified_proto
+            ]
+            with open(output.replace(".tx", ".json"), 'w') as f:
+                subprocess.run(cmd, check=True, stdout=f)
+
+            # Converte a atualização para Protobuf
+            cmd = [configtxlator_path, "proto_encode", "--input", output.replace(".tx", ".json"), "--type", "common.ConfigUpdate"]
+            with open(output, 'wb') as f:
+                subprocess.run(cmd, check=True, stdout=f)
+
+        def update_anchor_peer(msp_id):
+            print_log(f"Updating anchor peer for Org{org} on channel {channel_name}")
+            peer_cmd = [
+                "/home/nobrega/Desktop/fabric-samples/bin/peer", "channel", "update",
+                "-o", "localhost:7050",
+                "--ordererTLSHostnameOverride", "mn.orderer",
+                "-c", channel_name,
+                "-f", f"channel-artifacts/{msp_id}anchors.tx",
+                "--tls", "--cafile", f"{os.getcwd()}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt"
+            ]
+            subprocess.run(peer_cmd, check=True)
+            print_log(f"Anchor peer set for org '{msp_id}' on channel '{channel_name}'")
+
+        msp_id = f"Org{org}MSP"
+        create_anchor_peer_update(org, channel_name)
+        create_config_update(channel_name, msp_id)
+        update_anchor_peer(msp_id)

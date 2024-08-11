@@ -9,6 +9,9 @@ setLogLevel('info')
 exp = FogbedExperiment()
 fabric_plugin = FabricPlugin(exp)
 
+# Geração dos materiais criptográficos
+fabric_plugin.generate_crypto_materials()
+
 # Criação da instância virtual para o Orderer
 cloud = exp.add_virtual_instance('cloud')
 
@@ -16,7 +19,7 @@ cloud = exp.add_virtual_instance('cloud')
 orderer = fabric_plugin.add_orderer(
     name='orderer',
     environment={
-        'FABRIC_LOGGING_SPEC': 'DEBUG',
+        'FABRIC_LOGGING_SPEC': 'INFO',
         'ORDERER_GENERAL_LISTENADDRESS': '0.0.0.0',
         'ORDERER_GENERAL_LISTENPORT': '7050',
         'ORDERER_GENERAL_LOCALMSPID': 'OrdererMSP',
@@ -56,7 +59,7 @@ peer0_org1 = fabric_plugin.add_peer(
     name='peer0.org1',
     environment={
         'FABRIC_CFG_PATH': '/etc/hyperledger/peercfg',
-        'FABRIC_LOGGING_SPEC': 'DEBUG',
+        'FABRIC_LOGGING_SPEC': 'WARNING',
         'CORE_PEER_TLS_ENABLED': 'true',
         'CORE_PEER_PROFILE_ENABLED': 'false',
         'CORE_PEER_TLS_CERT_FILE': '/etc/hyperledger/fabric/tls/server.crt',
@@ -96,7 +99,7 @@ peer0_org2 = fabric_plugin.add_peer(
     name='peer0.org2',
     environment={
         'FABRIC_CFG_PATH': '/etc/hyperledger/peercfg',
-        'FABRIC_LOGGING_SPEC': 'DEBUG',
+        'FABRIC_LOGGING_SPEC': 'INFO',
         'CORE_PEER_TLS_ENABLED': 'true',
         'CORE_PEER_PROFILE_ENABLED': 'false',
         'CORE_PEER_TLS_CERT_FILE': '/etc/hyperledger/fabric/tls/server.crt',
