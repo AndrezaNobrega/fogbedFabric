@@ -11,9 +11,11 @@ organizations/fabric-ca/org2/*
 organizations/ordererOrganizations/*
 organizations/peerOrganizations/*
 system-genesis-block/*
+containernet/
 *.tar.gz
 log.txt
-openflow
+openflow/
+INFO
 # Ignorar o cache do Python
 __pycache__/
 *.py[cod]
