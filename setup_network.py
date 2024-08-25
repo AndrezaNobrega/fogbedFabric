@@ -9,7 +9,9 @@ setLogLevel('info')
 exp = FogbedExperiment()
 fabric_plugin = FabricPlugin(exp)
 
-# Criação da instância virtual para o Orderer
+# Geração dos materiais criptográficos
+# fabric_plugin.generate_crypto_materials()
+
 cloud = exp.add_virtual_instance('cloud')
 
 # Iniciar o Orderer

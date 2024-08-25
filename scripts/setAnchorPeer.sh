@@ -11,7 +11,11 @@
 # when invoking this for org3 as test-network/scripts/org3-scripts
 # the value is changed from default as $PWD(test-network)
 # to .. as relative path to make the import works
+export PATH=$PATH:/home/nobrega/Desktop/fabric-samples/bin
 TEST_NETWORK_HOME=${TEST_NETWORK_HOME:-${PWD}}
+
+infoln "test_network home ${TEST_NETWORK_HOME}"
+
 . ${TEST_NETWORK_HOME}/scripts/configUpdate.sh
 
 infoln ++++++++++++++++++++++++++++++++++++++++++++++++++

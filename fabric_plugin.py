@@ -3,6 +3,7 @@ import os
 from subprocess import check_output, CalledProcessError
 import time
 from colored_printer import successln, errorln, warningln
+import subprocess
 
 class FabricPlugin:
     def __init__(self, exp):
@@ -22,6 +23,56 @@ class FabricPlugin:
         self.exp.add_docker(container, self.exp.get_virtual_instance('cloud'))
         self.containers[name] = container
         return container
+    
+        
+    def create_docker_network(self, network_name):
+        # Verifica se a rede já existe
+        try:
+            output = subprocess.check_output(['docker', 'network', 'ls'])
+            if network_name in output.decode():
+                print(f"A rede '{network_name}' já existe.")
+                return
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao listar redes Docker: {e}")
+            print(f"Saída de erro: {e.output.decode()}")
+            return
+
+        print(f"Criando a rede Docker '{network_name}'...")
+        command = ['docker', 'network', 'create', network_name]
+
+        try:
+            subprocess.run(command, check=True)
+            print(f"Rede '{network_name}' criada com sucesso.")
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao criar a rede Docker: {e}")
+            print(f"Saída de erro: {e.output.decode()}")
+
+    def generate_crypto_materials(self):
+        print("Gerando materiais criptográficos 🌀")
+        self.create_docker_network('fabric_test')
+        
+        # Caminho para o diretório onde estão as configurações de cryptogen
+        crypto_config_path = "./organizations/cryptogen"
+        
+        # Caminho absoluto para o binário cryptogen
+        cryptogen_path = "/home/nobrega/Desktop/fabric-samples/bin/cryptogen"
+        
+        # Comandos para gerar materiais criptográficos
+        commands = [
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-org1.yaml --output=organizations",
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-org2.yaml --output=organizations",
+            f"{cryptogen_path} generate --config={crypto_config_path}/crypto-config-orderer.yaml --output=organizations"
+        ]
+        
+        # Executando cada comando
+        for command in commands:
+            print(f"Executando comando: {command}")
+            try:
+                subprocess.run(command, shell=True, check=True)
+                print("Comando executado com sucesso.  \n")
+            except subprocess.CalledProcessError as e:
+                print(f"Erro ao executar o comando: {e} \n")
+                print(f"Saída de erro: {e.output.decode()}")
 
     def add_peer(self, name, environment, volumes, port_bindings, org_instance, network_mode):
         container = Container(
